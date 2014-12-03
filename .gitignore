@@ -1,0 +1,5 @@
+.chef/*.pem
+tmp/
+.vagrant/
+.kitchen/
+.kitchen.local.yml
