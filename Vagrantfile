@@ -3,19 +3,14 @@
 
 # Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
 VAGRANTFILE_API_VERSION = '2'
-BASE_BOX = 'opscode-centos-6.5'
+BASE_BOX = 'centos-6.5'
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = BASE_BOX
-
-  if Vagrant.has_plugin?('vagrant-cachier')
-    config.cache.scope = :box
-  end
+  config.cache.scope = :box if Vagrant.has_plugin?('vagrant-cachier')
 
   # disable, need to update the kernel first on centos-6.5
-  if Vagrant.has_plugin?('vagrant-vbguest')
-    config.vbguest.no_install = true
-  end
+  # config.vbguest.no_install = false if Vagrant.has_plugin?('vagrant-vbguest')
 
   if Vagrant.has_plugin?('vagrant-omnibus')
     config.omnibus.chef_version = :latest
@@ -30,10 +25,15 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vb.customize [ 'modifyvm', :id, '--ioapic', 'on', '--cpus', 2, '--memory', 512 ]
   end
 
-  docker = <<-SCRIPT
-  cat /vagrant/bash_aliases >> /home/vagrant/.bashrc
+  update = <<-SCRIPT
+  cat /vagrant/files/bash_aliases >> /home/vagrant/.bashrc
   sudo yum -y install epel-release
-  sudo yum -y update kernel device-mapper
+  sudo yum -y update kernel && sudo yum -y install kernel-devel
+  SCRIPT
+
+  # config.vm.provision :shell, inline: update
+
+  docker = <<-SCRIPT
   sudo yum -y install docker-io
   sudo service docker start
   sudo chkconfig docker on
