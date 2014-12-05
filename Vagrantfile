@@ -7,32 +7,34 @@ VAGRANTFILE_API_VERSION = '2'
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box      = 'opscode-centos-6.5'
   config.vm.box_url  = 'https://opscode-vm-bento.s3.amazonaws.com/vagrant/virtualbox/opscode_centos-6.5_chef-provisionerless.box'
-  config.vm.hostname = 'docker-registry'
+  config.vm.synced_folder '~/Repos', '/repos'
 
   config.cache.scope = :box if Vagrant.has_plugin?('vagrant-cachier')
-
   if Vagrant.has_plugin?('vagrant-omnibus')
     config.omnibus.chef_version = :latest
   else
     config.vm.provision :shell, inline: 'curl -L https://www.getchef.com/chef/install.sh | sudo bash'
   end
 
-  config.vm.network 'private_network', ip: '192.168.33.100'
-  config.vm.provider :virtualbox do |vb|
-    vb.name = 'docker-registry'
-    vb.customize [ 'modifyvm', :id, '--ioapic', 'on', '--cpus', 2, '--memory', 512 ]
+  config.vm.define :registry_manual do |registry_manual|
+    registry_manual.vm.hostname = 'docker-registry-manual'
+    registry_manual.vm.network 'private_network', ip: '192.168.33.100'
+
+    registry_manual.vm.provider :virtualbox do |vb|
+      vb.name = 'docker-registry-manual'
+      vb.customize [ 'modifyvm', :id, '--ioapic', 'on', '--cpus', 1, '--memory', 512 ]
+    end
+
+    docker = <<-SCRIPT
+    sudo yum -y install epel-release
+    sudo yum -y update device-mapper
+    sudo yum -y install docker-io
+    sudo service docker start
+    sudo chkconfig docker on
+    SCRIPT
+
+    registry_manual.vm.provision :shell, inline: docker
   end
-  config.vm.synced_folder '~/Repos', '/repos'
-
-  docker = <<-SCRIPT
-  sudo yum -y install epel-release
-  sudo yum -y update device-mapper
-  sudo yum -y install docker-io
-  sudo service docker start
-  sudo chkconfig docker on
-  SCRIPT
-
-  config.vm.provision :shell, inline: docker
 
 
   # Disable automatic box update checking. If you disable this, then
