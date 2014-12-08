@@ -16,9 +16,25 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.provision :shell, inline: 'curl -L https://www.getchef.com/chef/install.sh | sudo bash'
   end
 
+  config.vm.define :registry do |registry|
+    registry.vm.hostname = 'registry.docker.local'
+    registry.vm.network 'private_network', ip: '192.168.33.100'
+
+    registry.vm.provider :virtualbox do |vb|
+      vb.name = 'docker-registry'
+      vb.customize [ 'modifyvm', :id, '--ioapic', 'on', '--cpus', 1, '--memory', 512 ]
+    end
+
+    registry.vm.provision :chef_solo do |chef|
+      chef.cookbooks_path = File.expand_path('../cookbooks', __FILE__)
+
+      chef.add_recipe 'docker'
+    end
+  end
+
   config.vm.define :registry_manual do |registry_manual|
     registry_manual.vm.hostname = 'docker-registry-manual'
-    registry_manual.vm.network 'private_network', ip: '192.168.33.100'
+    registry_manual.vm.network 'private_network', ip: '192.168.33.101'
 
     registry_manual.vm.provider :virtualbox do |vb|
       vb.name = 'docker-registry-manual'
